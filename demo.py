@@ -18,6 +18,8 @@ session = HTMLSession()
 
 def LoadData(url):
     r = session.get(url, auth=HTTPBasicAuth('admin', 'admin12345'))
+    if r.status_code != 200:
+        st.write("数据网页加载错误，请重新加载！")
     
     odata = r.html.text
     data = re.findall('\{(.*?)\}', re.findall('\[(.*?)\]', odata)[0])
@@ -728,10 +730,13 @@ def MultipleChangePointDetection(series, min_size):
 
 # Box-Ljung test
 def LB(series, freq):
-    pvalue = acorr_ljungbox(series, lags=3*freq)[1]
-    if (max(pvalue) < 0.05):
-        return ('非白噪声')
-    else:
+    try:
+        pvalue = acorr_ljungbox(series, lags=3*freq)[1]
+        if (max(pvalue) < 0.05):
+            return ('非白噪声')
+        else:
+            return ('白噪声')
+    except:
         return ('白噪声')
     
 
