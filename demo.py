@@ -18,8 +18,6 @@ session = HTMLSession()
 
 def LoadData(url):
     r = session.get(url, auth=HTTPBasicAuth('admin', 'admin12345'))
-    if r.status_code != 200:
-        st.write("数据网页加载错误，请重新加载！")
     
     odata = r.html.text
     data = re.findall('\{(.*?)\}', re.findall('\[(.*?)\]', odata)[0])
@@ -704,7 +702,7 @@ from statsmodels.tsa.stattools import adfuller
 from statsmodels.stats.diagnostic import acorr_ljungbox
 from pandas.plotting import autocorrelation_plot
 import statsmodels.api as sm
-from statsmodels.tsa.arima_model import ARIMA
+from statsmodels.tsa.arima.model import ARIMA
 from statsmodels.tsa.seasonal import seasonal_decompose
 from statsmodels.tsa.holtwinters import SimpleExpSmoothing,ExponentialSmoothing
 from sklearn.metrics import mean_absolute_error, mean_squared_error
@@ -731,7 +729,7 @@ def MultipleChangePointDetection(series, min_size):
 # Box-Ljung test
 def LB(series, freq):
     try:
-        pvalue = acorr_ljungbox(series, lags=3*freq)[1]
+        pvalue = acorr_ljungbox(series, lags=3*freq)['lb_pvalue']
         if (max(pvalue) < 0.05):
             return ('非白噪声')
         else:
@@ -782,19 +780,19 @@ def ARIMA_Forcasting(series, p, d, q):
         for i in range(d):
             diff.append(series[len(series)-1])
             series = series.diff(1).dropna()
-    model = ARIMA(series, (p,d,q)).fit()
+    model = ARIMA(endog=series, order=(p,d,q)).fit()
     # model.summary2()
     if (d == 0):
-        forcast = model.forecast()[0][0]
+        forecast = model.forecast(steps=1).iloc[0]
     else:
-        forcast = model.forecast()[0][0] + sum(diff)
-    return round(forcast, 1)
+        forecast = model.forecast(steps=1).iloc[0] + sum(diff)
+    return round(forecast, 2)
 
 
 # triple exponential smoothing model
 def TripleExponentialSmoothing_Forcasting(series, freq):
     model = ExponentialSmoothing(series, trend='add', seasonal='add', seasonal_periods=freq).fit()
-    return round(model.forecast(1), 1)
+    return round(model.forecast(1), 2)
 
 
 def print_Forcast(df, freq):
