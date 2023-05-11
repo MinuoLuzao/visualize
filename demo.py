@@ -689,7 +689,229 @@ def print_SPC(data,left,right):
         Lapage_chart(dataSPC, random, table)
     return
 
+# %%
+# In[能力指数部分]
+import numpy as np
+import math
+def boxcox_change(data,boxcox):
+    data1=data.iloc[:, 1] ##数据
+    quantity=len(data1)
 
+    for i in range(0,quantity):##bc变换
+        data.iloc[i,1]=(pow(data1[i],boxcox)-1)/boxcox
+
+    st.write("转换方法：Box-Cox变换")
+    st.write("最佳参数λ：",boxcox)
+    return data
+
+def johnson_change(data, Jtype, J1, J2, J3, J4):
+    data1 = data.iloc[:, 1]  ##数据
+    quantity = len(data1)
+    if Jtype == 1:##有界变换
+        for i in range(0, quantity):
+            data[i:1]=J1+J2*(np.log((data1[i]-J3)/(J4-data1[i])))
+        st.write("转换方法：Johnson变换，有界变换")
+    elif Jtype == 2:
+        for i in range(0, quantity):
+            data[i:1] = J1 + J2 * (math.asinh(data1[i] - J3) / J4)
+        st.write("转换方法：Johnson变换，无界变换")
+    st.write("最佳参数：形状参数：",J1,J2,"，""位置参数：",J3,"尺度参数：",J4)
+    return data
+
+def short_norm_Cp(data, up, low,cplong,corrtype):
+    middle = data.iloc[:, 1]
+    mean = np.mean(middle)  ##标准化
+    standard = np.std(middle, ddof=1)
+    quantity = len(data)
+    for i in range(1,quantity):
+        data.iloc[i, 1] = (middle[i] - mean) / standard
+    data1 = data.iloc[:, 1]
+    group=int((quantity-100)/10)
+    date = data.iloc[:, 0]  ##日期
+    cpkx = np.zeros(group) ##储存cpk
+    y = np.zeros(group)##储存cp
+    long_cp= np.zeros(group)
+    numberforCp = np.zeros(group)  ##储存横轴
+    for i in range (0,group):
+        start=i*10+1
+        end=start+100
+        all=0
+        for j in range (start,end):
+             dt=data1[j+1]-data1[j]
+             dt2=pow(dt,2)
+             all+=dt2
+        sigma1 = all /100 / 2
+        sigma = pow(sigma1, 0.5)
+        mean = np.mean(data1[start:end])
+        Cp1 = (up - mean) / (3 * sigma)
+        Cp2 = (mean - low) / (3 * sigma)
+        Cp=(up - low) / (6 * sigma)
+        Cpk=min(Cp1,Cp2)
+        y[i] = Cp
+        cpkx[i]=Cpk
+        numberforCp[i] = i
+    for i in range (0,10):
+        around=round(i*quantity/10)+1
+        date[i]=date[around]
+    for i in range(0,group):
+        long_cp[i]=cplong
+
+    st.markdown(">**测点长短期能力指数折线图**")
+    plt.figure(figsize=(10, 7))  # 设置绘图大小为20*15
+    plt.xlabel('日期')  # 设置x、y轴标签
+    plt.ylabel('过程能力指数Cp')  # 设置y轴刻度范围为0~11
+    plt.plot(numberforCp,y, color='m', label='短期Cp')
+    plt.plot(numberforCp,cpkx, color='g', label='短期Cpk')
+    plt.xticks(ticks=range(0, round(group / 10) * 10, round(group / 10)), labels=date[0:10], rotation=45)
+    if corrtype == 1:
+        plt.plot(numberforCp, long_cp, color='b', label='长期单变量能力指数')
+    elif corrtype == 2:
+        plt.plot(numberforCp, long_cp, color='b', label='长期多元能力指数')
+    plt.legend(loc="upper left")
+
+    st.pyplot(plt.gcf())
+    numberfordata = np.zeros(quantity)
+    for i in range(0, quantity):
+        numberfordata[i] = i
+
+    st.markdown(
+        '''
+        - 注：短期能力指数由对应日期开始的100个观测值数据计算。
+        - 图中若出现零值，则为短期内数据值一致，标准差为0，无法计算能力指数。
+        ''')
+
+    st.markdown(">**测点观测值折线图**")
+    st.write("可将数据与边界值情况与上图对照查看过程能力。")
+    plt.figure(figsize=(10, 7))  # 设置绘图大小为20*15
+    plt.xlabel('日期')  # 设置x、y轴标签
+    plt.ylabel('数据')  # 设置y轴刻度范围为0~11
+    plt.plot(numberfordata[1:quantity], data1[1:quantity], color='m', label='测点数据')
+    upline = np.array([up] * quantity)
+    lowline = np.array([low] * quantity)
+    plt.plot(numberfordata, upline, color='b', label='上限')
+    plt.plot(numberfordata, lowline, color='g', label='下限')
+    plt.xticks(ticks=range(0, round(quantity / 10) * 10, round(quantity / 10)), labels=date[0:10], rotation=45)
+
+    plt.legend(loc="upper left")
+    st.pyplot(plt.gcf())
+    return
+
+def unnorm_Cp(data,up,low):
+    # 读取数据
+    data1 = data.iloc[:, 1]  ##数据
+    date = data.iloc[:, 0]  ##日期
+    quantity=len(data1)
+    group=int((quantity-100)/10)
+
+    for i in range (0,quantity):##转为可作用于坐标轴格式
+        date[i]=str(date[i])
+
+    y=np.zeros(group)##储存cp
+    numberforCp=np.zeros(group)##储存横轴
+
+    long_cp=np.zeros(group)##长期cp
+    for j in range (0,group):##短期cp计算
+
+        start=j*10##起始点
+
+        end=start+100##跨度100
+
+        mean = np.mean(data1[start:end])
+        p=0
+        for i in range(start,end):
+            k=mean-data1[i]
+            if k>0:
+                p+=1
+            else:
+                p+=0
+        Px=p/100
+        all=0
+        for p in range(start, end):
+            dt = data1[p+1] - data1[p]
+            dt2 = pow(dt, 2)
+            all+=dt2
+        sigma1 =all/(100*2)
+        sigma = pow(sigma1, 0.5)
+        mid1=1-2*Px
+        mid2=abs(mid1)
+        mid3=mid2+1
+        Wx=pow(mid3,0.5)
+        Cp=(up-low)/(6*sigma*Wx)
+
+        y[j]=Cp
+        numberforCp[j]=j
+    mean = np.mean(data1)
+    sigma = np.std(data1, ddof=1)
+    p=0
+    for u in range(0,quantity):##长期cp计算
+        k = mean - data1[u]
+        if k > 0:
+            p += 1
+        else:
+            p += 0
+
+    Px = p / quantity
+    mid1 = 1 - 2 * Px
+    mid2 = abs(mid1)
+    mid3 = mid2 + 1
+    Wx = pow(mid3, 0.5)
+    Cp=(up-low)/(6*sigma*Wx)
+    for i in range(0,group):
+        long_cp[i]=Cp
+    for i in range (0,10):
+        around=round(i*quantity/10)
+        date[i]=date[around]
+
+    st.write("转换方法：非正态方法")
+    st.markdown(">**测点长短期能力指数折线图**")
+    plt.figure(figsize=(10,7))  # 设置绘图大小为20*15
+    plt.xlabel('日期')  # 设置x、y轴标签
+    plt.ylabel('过程能力指数Cp') # 设置y轴刻度范围为0~11
+    plt.plot(numberforCp,y,color='m',label='短期能力指数')
+
+    plt.xticks(ticks=range(0,round(group/10)*10,round(group/10)), labels=date[0:10], rotation=45)
+    plt.plot(numberforCp, long_cp, color='b', label='长期能力指数')
+    plt.legend(loc="upper left")
+
+    st.pyplot(plt.gcf())
+    numberfordata = np.zeros(quantity)
+    for i in range(0,quantity):
+        numberfordata[i]=i
+    st.markdown(
+        '''
+        - 注：短期能力指数由对应日期开始的100个观测值数据计算。
+        - 图中若出现零值，则为短期内数据值一致，标准差为0，无法计算能力指数。
+        ''')
+    st.markdown(">**测点观测值折线图**")
+    st.write("可将数据与边界值情况与上图对照查看过程能力。")
+    plt.figure(figsize=(10, 7))  # 设置绘图大小为20*15
+    plt.xlabel('日期')  # 设置x、y轴标签
+    plt.ylabel('数据')  # 设置y轴刻度范围为0~11
+    plt.plot(numberfordata, data1, color='m', label='测点数据')
+    upline=np.array([up]*quantity)
+    lowline=np.array([low]*quantity)
+    plt.plot(numberfordata, upline, color='b', label='上限')
+    plt.plot(numberfordata, lowline, color='g', label='下限')
+    plt.xticks(ticks=range(0, round(quantity/10)*10, round(quantity/10)), labels=date[0:10], rotation=45)
+
+    plt.legend(loc="upper left")
+    st.pyplot(plt.gcf())
+
+
+    return
+
+def print_Cp(data,up,low,type,boxcox,Jtype,J1,J2,J3,J4,cplong,corrtype):
+    if type==1:
+        short_norm_Cp(boxcox_change(data,boxcox),up,low,cplong,corrtype)
+    elif type==2:
+        short_norm_Cp(johnson_change(data,Jtype,J1,J2,J3,J4),up,low,cplong,corrtype)
+    elif type==3:
+        short_norm_Cp(data,up,low,cplong,corrtype)
+        st.write("转换类型：原始数据符合正态分布。")
+    elif type==4:
+        unnorm_Cp(data,up,low)
+
+    return
 # %%
 # In[质量预测部分]
 # import library
@@ -719,7 +941,6 @@ def MultipleChangePointDetection(series, min_size):
     result = algo.predict(pen=m.log(len(series), m.e))
 
     rpt.display(np.array(signal), result, figsize=(13, 2), dpi=100)
-    plt.ylabel('质量数据', fontproperties='SimHei', fontsize=12)
     # plt.title(colname, fontproperties='SimHei', fontsize=14)
     st.pyplot(plt.gcf())
 
@@ -850,29 +1071,503 @@ mode = st.sidebar.selectbox('选择类型',['过程能力指数','控制图','�
 # 能力指数页面
 if mode == '过程能力指数':
     st.subheader('过程能力指数')
-#     captabzp5,captabzp8 = st.tabs(["ZP5四门匹配","ZP8四门匹配"])##标签页
-#     with captabzp5:
-#         capoptionzp5 = st.selectbox('选择测点', ['ZP5测点1能力指数','ZP5测点2能力指数','ZP5测点3能力指数'])
-#         if capoptionzp5 == 'ZP5测点1能力指数':
-#             target = data.iloc[:, 6]
-#         elif capoptionzp5 == 'ZP5测点2能力指数':
-#             target = data.iloc[:, 7]
-#         elif capoptionzp5 == 'ZP5测点3能力指数':
-#             target = data.iloc[:, 8]
+    guage, match, twist = st.tabs(["检具数据", "匹配数据", "扭矩数据"])  ##标签页
+    with guage:
+        Sheet = st.selectbox('选择测量表', ['车顶型面', '前风窗', '后风窗', '框型面后盖', '左侧车顶激光焊落差', '右侧车顶激光焊落差'])
 
-#         st.line_chart(target)##绘图
+        if Sheet == '车顶型面':
+            url_RoofSurface = 'https://qrkapp-sandbox.mxapps.io/odata/QRKCarODataService/v1/RoofSurface_Sunroofs'
+            df_RoofSurface = DataPrep(url_car, url_RoofSurface, 'RoofSurface')
+            data = df_RoofSurface
 
-#     with captabzp8:
-#         capoptionzp8 = st.selectbox('选择测点', ['ZP8测点1能力指数', 'ZP8测点2能力指数', 'ZP5测点8能力指数'])
+            pool = data.columns.tolist()
+            Variable = st.selectbox('选择测点', pool[2:len(pool) - 1])
+            dataUsed = data.loc[:, ['Date', Variable]]
+            print_Cp(dataUsed,0.5,0,4,0,0,0,0,0,0,0,0) ## data,上限，下限，转换类型，bc,sbsu,J1234，cplong,corr
 
-#         if capoptionzp8 == 'ZP5测点8能力指数':
-#             target = data.iloc[:, 1]
-#         elif capoptionzp8 == 'ZP5测点8能力指数':
-#             target = data.iloc[:, 2]
-#         elif capoptionzp8 == 'ZP5测点8能力指数':
-#             target = data.iloc[:, 3]
+        elif Sheet == '前风窗':
+            url_FrontWindshield = 'https://qrkapp-sandbox.mxapps.io/odata/QRKCarODataService/v1/FrontWindshields'
+            df_FrontWindshield = DataPrep(url_car, url_FrontWindshield, 'WindshieldFrameFace')
+            data = df_FrontWindshield
 
-#         st.line_chart(target)  ##绘图
+            pool = data.columns.tolist()
+            Variable = st.selectbox('选择测点', pool[2:len(pool)])
+            dataUsed = data.loc[:, ['Date', Variable]]
+            print_Cp(dataUsed, 3.8,2.2,4,0,0,0,0,0,0,0,0)
+        elif Sheet == '后风窗':
+            url_RearWindshield = 'https://qrkapp-sandbox.mxapps.io/odata/QRKCarODataService/v1/RearWindshields'
+            df_RearWindshield = DataPrep(url_car, url_RearWindshield, 'WindshieldFrameFace')
+            data = df_RearWindshield
+
+            pool = data.columns.tolist()
+            pool = pool[2:len(pool)]
+            Variable = st.selectbox('选择测点', pool)
+            lLimit = [2.2, 2.2, 2.7, 2.7, 2.7, 2.7, 2.2, 2.2]
+            rLimit = [3.8, 3.8, 4.3, 4.3, 4.3, 4.3, 3.8, 3.8]
+            idx = pool.index(Variable)
+            dataUsed = data.loc[:, ['Date', Variable]]
+            print_Cp(dataUsed,rLimit[idx],lLimit[idx],4,0,0,0,0,0,0,0,0)
+        elif Sheet == '框型面后盖':
+            url_FrameFaceBackCover = 'https://qrkapp-sandbox.mxapps.io/odata/QRKCarODataService/v1/FrameFaceBackCovers'
+            df_FrameFaceBackCover = DataPrep(url_car, url_FrameFaceBackCover, 'WindshieldFrameFace')
+            data = df_FrameFaceBackCover
+
+            pool = data.columns.tolist()
+            Variable = st.selectbox('选择测点', pool[2:len(pool)])
+            dataUsed = data.loc[:, ['Date', Variable]]
+            print_Cp(dataUsed,5.5,3.5,4,0,0,0,0,0,0,0,0)
+        elif Sheet == '左侧车顶激光焊落差':
+            url_RoofLaserWeldingDrop_Left = 'https://qrkapp-sandbox.mxapps.io/odata/QRKCarODataService/v1/RoofLaserWeldingDrop_Lefts'
+            df_RoofLaserWeldingDrop_Left = DataPrep(url_car, url_RoofLaserWeldingDrop_Left, 'RoofLaserWeldingDrop')
+            data = df_RoofLaserWeldingDrop_Left
+
+            pool = data.columns.tolist()
+            pool = pool[2:len(pool)]
+            Variable = st.selectbox('选择测点', pool)
+            lLimit = [2.8, 3, 2.9, 3, 2.8, 3, 3, 3, 2.8, 0]
+            rLimit = [4.8, 5, 4.9, 5, 4.8, 5, 5, 5, 4.8, 1]
+            idx = pool.index(Variable)
+            dataUsed = data.loc[:, ['Date', Variable]]
+            print_Cp(dataUsed,  rLimit[idx],lLimit[idx],4,0,0,0,0,0,0,0,0)
+        elif Sheet == '右侧车顶激光焊落差':
+            url_RoofLaserWeldingDrop_Right = 'https://qrkapp-sandbox.mxapps.io/odata/QRKCarODataService/v1/RoofLaserWeldingDrop_Rights'
+            df_RoofLaserWeldingDrop_Right = DataPrep(url_car, url_RoofLaserWeldingDrop_Right, 'RoofLaserWeldingDrop')
+            data = df_RoofLaserWeldingDrop_Right
+
+            pool = data.columns.tolist()
+            pool = pool[2:len(pool)]
+            Variable = st.selectbox('选择测点', pool)
+            lLimit = [2.8, 3, 2.9, 3, 2.8, 3, 3, 3, 2.8, 0]
+            rLimit = [4.8, 5, 4.9, 5, 4.8, 5, 5, 5, 4.8, 1]
+            idx = pool.index(Variable)
+            dataUsed = data.loc[:, ['Date', Variable]]
+            print_Cp(dataUsed,  rLimit[idx],lLimit[idx],4,0,0,0,0,0,0,0,0)
+
+    with match:
+        carType = st.selectbox('选择车型', ['ZP5', 'ZP8'])
+        Sheet = st.selectbox('选择测量表', ['前盖左侧', '前盖右侧', '后盖左侧', '后盖右侧', '前后门左侧', '前后门右侧', '前后门平整度左侧', '前后门平整度右侧'])
+        if carType == 'ZP5':
+            if Sheet == '前盖左侧':
+                url_ZP5_FrontCover_Left = 'https://qrkapp-sandbox.mxapps.io/odata/QRKCarODataService/v1/ZP5_FrontCover_Lefts'
+                df_ZP5_FrontCover_Left = DataPrep(url_car, url_ZP5_FrontCover_Left, 'ZP5')
+                data = df_ZP5_FrontCover_Left
+
+                pool = data.columns.tolist()
+                pool = pool[2:len(pool)]
+                Variable = st.selectbox('选择测点', pool)
+                lLimit = [2.5, 2.5, 2.5, 2, 3.4, 1, 0.1, 1.2, 1.7, 0.7, -1.5, -0.4]
+                rLimit = [3.5, 3.5, 3.5, 3, 4.4, 3, 1.1, 2.2, 2.7, 1.7, -1.0, 0.6]
+                idx = pool.index(Variable)
+                dataUsed = data.loc[:, ['Date', Variable]]
+                print_Cp(dataUsed,  rLimit[idx],lLimit[idx],4,0,0,0,0,0,0,0,0)
+            elif Sheet == '前盖右侧':
+                url_ZP5_FrontCover_Right = 'https://qrkapp-sandbox.mxapps.io/odata/QRKCarODataService/v1/ZP5_FrontCover_Rights'
+                df_ZP5_FrontCover_Right = DataPrep(url_car, url_ZP5_FrontCover_Right, 'ZP5')
+                data = df_ZP5_FrontCover_Right
+
+                pool = data.columns.tolist()
+                pool = pool[2:len(pool)]
+                Variable = st.selectbox('选择测点', pool)
+                lLimit = [2, 2.5, 2.5, 2, 3.4, 1, 0.1, 1.2, 1.7, 0.7, -1.5, -0.4]
+                rLimit = [3, 3.5, 3.5, 3, 4.4, 3, 1.1, 2.2, 2.7, 1.7, -1.0, 0.6]
+                idx = pool.index(Variable)
+                dataUsed = data.loc[:, ['Date', Variable]]
+                print_Cp(dataUsed,  rLimit[idx],lLimit[idx],4,0,0,0,0,0,0,0,0)
+            elif Sheet == '后盖左侧':
+                url_ZP5_BackCover_Left = 'https://qrkapp-sandbox.mxapps.io/odata/QRKCarODataService/v1/ZP5_BackCover_Lefts'
+                df_ZP5_BackCover_Left = DataPrep(url_car, url_ZP5_BackCover_Left, 'ZP5')
+                data = df_ZP5_BackCover_Left
+
+                pool = data.columns.tolist()
+                pool = pool[2:len(pool)]
+                Variable = st.selectbox('选择测点', pool)
+                lLimit = [2.2, 3, 3.4, 3.6, 3.8, 4.1, -2.0, -2.5, -1.9, -1, -2, -1.75]
+                rLimit = [3.2, 4, 4.4, 4.6, 4.8, 5.1, -1.5, -1.5, -0.9, 0, -1, -1.25]
+                idx = pool.index(Variable)
+                dataUsed = data.loc[:, ['Date', Variable]]
+                print_Cp(dataUsed,  rLimit[idx],lLimit[idx],4,0,0,0,0,0,0,0,0)
+            elif Sheet == '后盖右侧':
+                url_ZP5_BackCover_Right = 'https://qrkapp-sandbox.mxapps.io/odata/QRKCarODataService/v1/ZP5_BackCover_Rights'
+                df_ZP5_BackCover_Right = DataPrep(url_car, url_ZP5_BackCover_Right, 'ZP5')
+                data = df_ZP5_BackCover_Right
+
+                pool = data.columns.tolist()
+                pool = pool[2:len(pool)]
+                Variable = st.selectbox('选择测点', pool)
+                lLimit = [2.2, 3, 3.4, 3.6, 3.8, 4.1, -1.75, -2.25, -1.9, -1, -2, -2]
+                rLimit = [3.3, 4, 4.4, 4.6, 4.8, 5.1, -1.25, -1.25, -0.9, 0, -1, -1.5]
+                idx = pool.index(Variable)
+                dataUsed = data.loc[:, ['Date', Variable]]
+                print_Cp(dataUsed,  rLimit[idx],lLimit[idx],4,0,0,0,0,0,0,0,0)
+            elif Sheet == '前后门左侧':
+                url_ZP5_FrontRearDoor_Left = 'https://qrkapp-sandbox.mxapps.io/odata/QRKCarODataService/v1/ZP5_FrontRearDoor_Lefts'
+                df_ZP5_FrontRearDoor_Left = DataPrep(url_car, url_ZP5_FrontRearDoor_Left, 'ZP5')
+                data = df_ZP5_FrontRearDoor_Left
+
+                pool = data.columns.tolist()
+                pool = pool[2:len(pool)]
+                Variable = st.selectbox('选择测点', pool)
+                lLimit = [3, 3, 3, 4.2, 5.6, 5.6, 3.7, 3.7, 3.7, 5.6, 5.6, 3.3, 3.3, 3.3, 9.5, 9.5, 9.5, 9.5, 9.5, 9.5,
+                          9.5, 9.5]
+                rLimit = [4, 4, 4, 5.8, 7.6, 7.6, 4.7, 4.7, 4.7, 7.6, 7.6, 4.3, 4.3, 4.3, 10.5, 10.5, 10.5, 10.5, 10.5,
+                          11.5, 11.5, 11.5]
+                idx = pool.index(Variable)
+                dataUsed = data.loc[:, ['Date', Variable]]
+                print_Cp(dataUsed,  rLimit[idx],lLimit[idx],4,0,0,0,0,0,0,0,0)
+            elif Sheet == '前后门右侧':
+                url_ZP5_FrontRearDoor_Right = 'https://qrkapp-sandbox.mxapps.io/odata/QRKCarODataService/v1/ZP5_FrontRearDoor_Rights'
+                df_ZP5_FrontRearDoor_Right = DataPrep(url_car, url_ZP5_FrontRearDoor_Right, 'ZP5')
+                data = df_ZP5_FrontRearDoor_Right
+
+                pool = data.columns.tolist()
+                pool = pool[2:len(pool)]
+                Variable = st.selectbox('选择测点', pool)
+                lLimit = [3, 3, 3, 4.2, 5.6, 5.6, 3.7, 3.7, 3.7, 5.6, 5.6, 3.3, 3.3, 3.3, 9.5, 9.5, 9.5, 9.5, 9.5, 9.5,
+                          9.5, 9.5]
+                rLimit = [4, 4, 4, 5.8, 7.6, 7.6, 4.7, 4.7, 4.7, 7.6, 7.6, 4.3, 4.3, 4.3, 10.5, 10.5, 10.5, 10.5, 10.5,
+                          11.5, 11.5, 11.5]
+                idx = pool.index(Variable)
+                dataUsed = data.loc[:, ['Date', Variable]]
+                print_Cp(dataUsed,  rLimit[idx],lLimit[idx],4,0,0,0,0,0,0,0,0)
+            elif Sheet == '前后门平整度左侧':
+                url_ZP5_FrontRearDoor_Flatness_Left = 'https://qrkapp-sandbox.mxapps.io/odata/QRKCarODataService/v1/ZP5_FrontRearDoor_Flatness_Lefts'
+                df_ZP5_FrontRearDoor_Flatness_Left = DataPrep(url_car, url_ZP5_FrontRearDoor_Flatness_Left, 'ZP5')
+                data = df_ZP5_FrontRearDoor_Flatness_Left
+
+                pool = data.columns.tolist()
+                pool = pool[2:len(pool)]
+                Variable = st.selectbox('选择测点', pool)
+                lLimit = [1.3, 0, 0, 0, 0, 0, 0, 0, 0]
+                rLimit = [1.8, 1, 1, 1, 1, 1, 1, 1, 1]
+                idx = pool.index(Variable)
+                dataUsed = data.loc[:, ['Date', Variable]]
+                print_Cp(dataUsed,  rLimit[idx],lLimit[idx],4,0,0,0,0,0,0,0,0)
+            elif Sheet == '前后门平整度右侧':
+                url_ZP5_FrontRearDoor_Flatness_Right = 'https://qrkapp-sandbox.mxapps.io/odata/QRKCarODataService/v1/ZP5_FrontRearDoor_Flatness_Rights'
+                df_ZP5_FrontRearDoor_Flatness_Right = DataPrep(url_car, url_ZP5_FrontRearDoor_Flatness_Right, 'ZP5')
+                data = df_ZP5_FrontRearDoor_Flatness_Right
+
+                pool = data.columns.tolist()
+                pool = pool[2:len(pool)]
+                Variable = st.selectbox('选择测点', pool)
+                lLimit = [1.3, 0, 0, 0, 0, 0, 0, 0, 0]
+                rLimit = [1.8, 1, 1, 1, 1, 1, 1, 1, 1]
+                idx = pool.index(Variable)
+                dataUsed = data.loc[:, ['Date', Variable]]
+                print_Cp(dataUsed,  rLimit[idx],lLimit[idx],4,0,0,0,0,0,0,0,0)
+        else:
+            if Sheet == '前盖左侧':
+                url_ZP8_FrontCover_Left = 'https://qrkapp-sandbox.mxapps.io/odata/QRKCarODataService/v1/ZP8_FrontCover_Lefts'
+                df_ZP8_FrontCover_Left = DataPrep(url_car, url_ZP8_FrontCover_Left, 'ZP8')
+                data = df_ZP8_FrontCover_Left
+
+                pool = data.columns.tolist()
+                pool = pool[2:len(pool)]
+                Variable = st.selectbox('选择测点', pool)
+                lLimit = [2.5, 2.5, 2.5, 2.5, 2.5, 3.4, 1, 0.1, -0.4, 0.25, 0.7, -0.4, -0.6]
+                rLimit = [3.5, 3.5, 3.5, 3.5, 3.5, 4.4, 3, 1.1, 0.6, 1.25, 1.7, 0.6, 0.4]
+                idx = pool.index(Variable)
+                dataUsed = data.loc[:, ['Date', Variable]]
+                print_Cp(dataUsed,  rLimit[idx],lLimit[idx],4,0,0,0,0,0,0,0,0)
+            elif Sheet == '前盖右侧':
+                url_ZP8_FrontCover_Right = 'https://qrkapp-sandbox.mxapps.io/odata/QRKCarODataService/v1/ZP8_FrontCover_Rights'
+                df_ZP8_FrontCover_Right = DataPrep(url_car, url_ZP8_FrontCover_Right, 'ZP8')
+                data = df_ZP8_FrontCover_Right
+
+                pool = data.columns.tolist()
+                pool = pool[2:len(pool)]
+                Variable = st.selectbox('选择测点', pool)
+                lLimit = [2.5, 2.5, 2.5, 2.5, 2.5, 3.4, 1, 0.1, -0.4, 0.25, 0.7, -0.4, -0.6]
+                rLimit = [3.5, 3.5, 3.5, 3.5, 3.5, 4.4, 3, 1.1, 0.6, 1.25, 1.7, 0.6, 0.4]
+                idx = pool.index(Variable)
+                dataUsed = data.loc[:, ['Date', Variable]]
+                print_Cp(dataUsed,  rLimit[idx],lLimit[idx],4,0,0,0,0,0,0,0,0)
+            elif Sheet == '后盖左侧':
+                url_ZP8_BackCover_Left = 'https://qrkapp-sandbox.mxapps.io/odata/QRKCarODataService/v1/ZP8_BackCover_Lefts'
+                df_ZP8_BackCover_Left = DataPrep(url_car, url_ZP8_BackCover_Left, 'ZP8')
+                data = df_ZP8_BackCover_Left
+
+                pool = data.columns.tolist()
+                pool = pool[2:len(pool)]
+                Variable = st.selectbox('选择测点', pool)
+                lLimit = [3, 3, 3, 3, 3.1, 3, -0.3, 0.1, -0.2, -0.3, -0.2, -0.1]
+                rLimit = [4, 4, 4, 4, 4.1, 4, 0.7, 1.1, 0.8, 0.7, 0.8, 0.9]
+                idx = pool.index(Variable)
+                dataUsed = data.loc[:, ['Date', Variable]]
+                print_Cp(dataUsed,  rLimit[idx],lLimit[idx],4,0,0,0,0,0,0,0,0)
+            elif Sheet == '后盖右侧':
+                url_ZP8_BackCover_Right = 'https://qrkapp-sandbox.mxapps.io/odata/QRKCarODataService/v1/ZP8_BackCover_Rights'
+                df_ZP8_BackCover_Right = DataPrep(url_car, url_ZP8_BackCover_Right, 'ZP8')
+                data = df_ZP8_BackCover_Right
+
+                pool = data.columns.tolist()
+                pool = pool[2:len(pool)]
+                Variable = st.selectbox('选择测点', pool)
+                lLimit = [3, 3, 3, 3, 3.1, 3, -0.3, 0.1, -0.2, -0.3, -0.2, -0.1]
+                rLimit = [4, 4, 4, 4, 4.1, 4, 0.7, 1.1, 0.8, 0.7, 0.8, 0.9]
+                idx = pool.index(Variable)
+                dataUsed = data.loc[:, ['Date', Variable]]
+                print_Cp(dataUsed,  rLimit[idx],lLimit[idx],4,0,0,0,0,0,0,0,0)
+            elif Sheet == '前后门左侧':
+                url_ZP8_FrontRearDoor_Left = 'https://qrkapp-sandbox.mxapps.io/odata/QRKCarODataService/v1/ZP8_FrontRearDoor_Lefts'
+                df_ZP8_FrontRearDoor_Left = DataPrep(url_car, url_ZP8_FrontRearDoor_Left, 'ZP8')
+                data = df_ZP8_FrontRearDoor_Left
+
+                pool = data.columns.tolist()
+                pool = pool[2:len(pool)]
+                Variable = st.selectbox('选择测点', pool)
+                lLimit = [3.2, 3, 3, 4.2, 5.6, 5.6, 3.7, 3.7, 3.7, 5.6, 5.6, 3.3, 3.3, 3.3, 3.1, 3.1, 3.1]
+                rLimit = [4.2, 4, 4, 5.8, 7.6, 7.6, 4.7, 4.7, 4.7, 7.6, 7.6, 4.3, 4.3, 4.3, 5.1, 5.1, 5.1]
+                idx = pool.index(Variable)
+                dataUsed = data.loc[:, ['Date', Variable]]
+                print_Cp(dataUsed,  rLimit[idx],lLimit[idx],4,0,0,0,0,0,0,0,0)
+            elif Sheet == '前后门右侧':
+                url_ZP8_FrontRearDoor_Right = 'https://qrkapp-sandbox.mxapps.io/odata/QRKCarODataService/v1/ZP8_FrontRearDoor_Rights'
+                df_ZP8_FrontRearDoor_Right = DataPrep(url_car, url_ZP8_FrontRearDoor_Right, 'ZP8')
+                data = df_ZP8_FrontRearDoor_Right
+
+                pool = data.columns.tolist()
+                pool = pool[2:len(pool)]
+                Variable = st.selectbox('选择测点', pool)
+                lLimit = [3.2, 3, 3, 4.2, 5.6, 5.6, 3.7, 3.7, 3.7, 5.6, 5.6, 3.3, 3.3, 3.3, 3.1, 3.1, 3.1]
+                rLimit = [4.2, 4, 4, 5.8, 7.6, 7.6, 4.7, 4.7, 4.7, 7.6, 7.6, 4.3, 4.3, 4.3, 5.1, 5.1, 5.1]
+                idx = pool.index(Variable)
+                dataUsed = data.loc[:, ['Date', Variable]]
+                print_Cp(dataUsed,  rLimit[idx],lLimit[idx],4,0,0,0,0,0,0,0,0)
+            elif Sheet == '前后门平整度左侧':
+                url_ZP8_FrontRearDoor_Flatness_Left = 'https://qrkapp-sandbox.mxapps.io/odata/QRKCarODataService/v1/ZP8_FrontRearDoor_Flatness_Lefts'
+                df_ZP8_FrontRearDoor_Flatness_Left = DataPrep(url_car, url_ZP8_FrontRearDoor_Flatness_Left, 'ZP8')
+                data = df_ZP8_FrontRearDoor_Flatness_Left
+
+                pool = data.columns.tolist()
+                pool = pool[2:len(pool)]
+                Variable = st.selectbox('选择测点', pool)
+                lLimit = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+                rLimit = [1.6, 1, 1, 1, 1, 1, 1, 1, 1]
+                idx = pool.index(Variable)
+                dataUsed = data.loc[:, ['Date', Variable]]
+                print_Cp(dataUsed,  rLimit[idx],lLimit[idx],4,0,0,0,0,0,0,0,0)
+            elif Sheet == '前后门平整度右侧':
+                url_ZP8_FrontRearDoor_Flatness_Right = 'https://qrkapp-sandbox.mxapps.io/odata/QRKCarODataService/v1/ZP8_FrontRearDoor_Flatness_Rights'
+                df_ZP8_FrontRearDoor_Flatness_Right = DataPrep(url_car, url_ZP8_FrontRearDoor_Flatness_Right, 'ZP8')
+                data = df_ZP8_FrontRearDoor_Flatness_Right
+
+                pool = data.columns.tolist()
+                pool = pool[2:len(pool)]
+                Variable = st.selectbox('选择测点', pool)
+                lLimit = [0, 0, 0, 0, 0, 0, 0, 0, 0]
+                rLimit = [1.6, 1, 1, 1, 1, 1, 1, 1, 1]
+                idx = pool.index(Variable)
+                dataUsed = data.loc[:, ['Date', Variable]]
+                print_Cp(dataUsed,  rLimit[idx],lLimit[idx],4,0,0,0,0,0,0,0,0)
+
+    with twist:
+        Sheet = st.selectbox('选择测量表', ['LNF_1', 'LNF_2', 'LNF2_1', 'LNF2_2', 'BA7', '左翼子板', '右翼子板'])
+
+        if Sheet == 'LNF_1':
+            url_LNF_1 = 'https://qrkapp-sandbox.mxapps.io/odata/QRKCarODataService/v1/LNF_1s'
+            df_LNF_1 = DataPrep_Mna1(url_car, url_LNF_1, 'Mna1_7830')
+            data = df_LNF_1
+
+            pool = data.columns.tolist()
+            pool = pool[2:len(pool)]
+            Variable = st.selectbox('选择测点', pool)
+            lLimit = [-3.585,-3.651,-9.010,-7.471,-6.427,-8.154,-4.365,-3.587,-5.404,-7.603,40,-4.498 ]
+            rLimit = [4.265,4.057,5.820,5.707,5.271,5.005,4.510,4.449,5.769,4.720,69,3.750 ]
+            Cplong = [1.194, 1.194, 1.194, 1.194, 1.950, 1.304, 1.248,1.248, 1.248, 1.248,0,1.304]
+            paraboxcox = [0,0,-1.332,-1.256,-2.462,-2.236,0,0,0,-2.085,0,0]
+            J1 = [0.157, -0.0934,0,0,0,0,-0.1780,0.4700,0,0,0,-0.8690]
+            J2 = [1.417, 1.630, 0,0,0,0,2.907,1.840,0,0,0,2.072]
+            J3 = [50.85, 49.76,0,0,0,0, 50.01,50.60,0,0,0, 49.95]
+            J4 = [1.896, 2.339,0,0,0,0,5.463,2.813,0,0,0, 3.341]
+            idx = pool.index(Variable)
+            dataUsed = data.loc[:, ['Date', Variable]]
+            if idx in [2,3,5,9]:##正态相关BC
+              print_Cp(dataUsed,  rLimit[idx],lLimit[idx],1,paraboxcox[idx],0,0,0,0,0,Cplong[idx],2)
+            elif idx in [4]:##正态独立BC
+                print_Cp(dataUsed, rLimit[idx], lLimit[idx], 1, paraboxcox[idx], 0, 0, 0, 0, 0, Cplong[idx], 1)
+            elif idx in [0,1,6,7,11]:##正态相关JC-SU
+                print_Cp(dataUsed, rLimit[idx], lLimit[idx], 2, 0, 2, J1[idx], J2[idx], J3[idx], J4[idx], Cplong[idx], 2)
+            elif idx in [8]:##正态相关原始
+                print_Cp(dataUsed, rLimit[idx], lLimit[idx], 3, 0, 0, 0,0,0,0, Cplong[idx],2)
+            elif idx in [10]:  ##非正态
+                print_Cp(dataUsed, rLimit[idx], lLimit[idx], 4, 0, 0, 0, 0, 0, 0, 0,0)
+        elif Sheet == 'LNF_2':
+            url_LNF_2 = 'https://qrkapp-sandbox.mxapps.io/odata/QRKCarODataService/v1/LNF_2s'
+            df_LNF_2 = DataPrep_Mna1(url_car, url_LNF_2, 'Mna1_7830')
+            data = df_LNF_2
+
+            pool = data.columns.tolist()
+            pool = pool[2:len(pool)]
+            Variable = st.selectbox('选择测点', pool)
+            lLimit = [-9.589,-10.835,-10.094,-9.756,-5.382,-8.871,-5.254,-4.180,-5.486,-4.730,-4.683,-4.770]
+            rLimit = [8.169,9.865,3.679,3.357,13.098,3.425,2.805,2.900,7.667,12.259,3.265,2.874]
+            Cplong = [1.910,1.910,1.358,1.358,1.792,2.049,1.358,1.358,1.358,1.358,1.403,1.403]
+            paraboxcox = [0,0,-2.839,-3.593,0,-7.286,0,0,3.794,5.477,0,0,4.774,0]
+            J1 = [0,0,0,0,0.3290,0,-1.224,-0.5804,0,0,-1.624,-1.707,0,0]
+            J2 = [0,0,0,0,1.293,0,1.898,1.674,0,0,1.592, 1.432,0,0]
+            J3 = [0,0,0,0,42.19,0,49.95,50.40,0,0, 45.28,45.29,0,0]
+            J4 = [0,0,0,0,52.69,0,2.395,2.339,0,0, 1.540,1.416,0,0]
+            idx = pool.index(Variable)
+            dataUsed = data.loc[:, ['Date', Variable]]
+            if idx in [2,3,8,9]:  ##正态相关BC
+                print_Cp(dataUsed, rLimit[idx], lLimit[idx], 1, paraboxcox[idx], 0, 0, 0, 0, 0, Cplong[idx], 2)
+            elif idx in [5]:  ##正态独立BC
+                print_Cp(dataUsed, rLimit[idx], lLimit[idx], 1, paraboxcox[idx], 0, 0, 0, 0, 0, Cplong[idx], 1)
+            elif idx in [4]:  ##正态独立JC-SB
+                print_Cp(dataUsed, rLimit[idx], lLimit[idx], 2, 0, 1, J1[idx], J2[idx], J3[idx], J4[idx], Cplong[idx],1)
+            elif idx in [6,7,10,11]:  ##正态相关JC-SU
+                print_Cp(dataUsed, rLimit[idx], lLimit[idx], 2, 0, 2, J1[idx], J2[idx], J3[idx], J4[idx], Cplong[idx],2)
+            elif idx in [0,1]:  ##正态相关原始
+                print_Cp(dataUsed, rLimit[idx], lLimit[idx], 3, 0, 0, 0, 0, 0, 0, Cplong[idx], 2)
+            elif idx in [12]:
+                st.write("转换方法：Boxcox")
+                st.write("最佳参数λ：",paraboxcox[idx])
+                st.write(">上下限数据缺失，请联系管理员设置数据后查看。")
+            elif idx in [13]:
+                st.write("转换方法：非正态方法")
+                st.write(">上下限数据缺失，请联系管理员设置数据后查看。")
+        elif Sheet == 'LNF2_1':
+            url_LNF2_1 = 'https://qrkapp-sandbox.mxapps.io/odata/QRKCarODataService/v1/LNF2_1s'
+            df_LNF2_1 = DataPrep_Mna1(url_car, url_LNF2_1, 'Mna1_7920')
+            data = df_LNF2_1
+
+            pool = data.columns.tolist()
+            pool = pool[2:len(pool)]
+            Variable = st.selectbox('选择测点', pool)
+            rLimit = [24,3.836,5.322,3.019,5.057,3.518,4.857,2.824,24,3.505,24,4.378]
+            lLimit = [16,-3.269,-3.595,-3.389,-2.953,-5.697,-4.472,-3.963,16,-3.896,16,-3.332]
+            Cplong = [0,1.310,1.194,1.194,1.310,1.310,1.194,1.194,0,1.397,0,1.397]
+            paraboxcox = [0,5.075,3.166,0,0,0,0,0,0,0,0,0]
+            J1 = [0,0,0,-0.1694,-2.671,0,0,-0.8255,0,0,0,0.2926]
+            J2 = [0,0,0,1.809,2.127,0,0,2.247,0,0,0,0.9663]
+            J3 = [0,0,0,20.02,12.14,0,0,19.64,0,0,0,18.36]
+            J4 = [0,0,0,1.351,23.75,0,0,1.614,0,0,0,23.34]
+            idx = pool.index(Variable)
+            dataUsed = data.loc[:, ['Date', Variable]]
+            if idx in [1,2]:  ##正态相关BC
+                print_Cp(dataUsed, rLimit[idx], lLimit[idx], 1, paraboxcox[idx], 0, 0, 0, 0, 0, Cplong[idx], 2)
+            elif idx in [5,6,9]:  ##正态相关原始
+                print_Cp(dataUsed, rLimit[idx], lLimit[idx], 3, 0, 0, 0, 0, 0, 0, Cplong[idx], 2)
+            elif idx in [4,11]:  ##正态相关JC-SB
+                print_Cp(dataUsed, rLimit[idx], lLimit[idx], 2, 0, 1, J1[idx], J2[idx], J3[idx], J4[idx], Cplong[idx],2)
+            elif idx in [3,7]:  ##正态相关JC-SU
+                print_Cp(dataUsed, rLimit[idx], lLimit[idx], 2, 0, 2, J1[idx], J2[idx], J3[idx], J4[idx], Cplong[idx],2)
+            elif idx in [0,8,10]:  ##非正态
+                print_Cp(dataUsed, rLimit[idx], lLimit[idx], 4, 0, 0, 0, 0, 0, 0,0,0)
+        elif Sheet == 'LNF2_2':
+            url_LNF2_2 = 'https://qrkapp-sandbox.mxapps.io/odata/QRKCarODataService/v1/LNF2_2s'
+            df_LNF2_2 = DataPrep_Mna1(url_car, url_LNF2_2, 'Mna1_7920')
+            data = df_LNF2_2
+
+            pool = data.columns.tolist()
+            pool = pool[2:len(pool)]
+            Variable = st.selectbox('选择测点', pool)
+            rLimit = [6.596,6.018,4.686,7.953]
+            lLimit = [-4.527,-9.991,-4.149,-7.467]
+            Cplong = [1.420,1.420,1.420,1.420]
+            paraboxcox = [0,-3.367,0,0]
+            J1 = [0.7964,0,-0.07666,-0.1386]
+            J2 = [2.950,0, 1.850,1.998]
+            J3 = [8.861,0,8.634,7.745]
+            J4 = [0.5721,0,0.3403,9.360]
+            idx = pool.index(Variable)
+            dataUsed = data.loc[:, ['Date', Variable]]
+            if idx in [1]:  ##正态相关BC
+                print_Cp(dataUsed, rLimit[idx], lLimit[idx], 1, paraboxcox[idx], 0, 0, 0, 0, 0, Cplong[idx], 2)
+            elif idx in [3]:  ##正态相关JC-SB
+                print_Cp(dataUsed, rLimit[idx], lLimit[idx], 2, 0, 1, J1[idx], J2[idx], J3[idx], J4[idx], Cplong[idx],2)
+            elif idx in [0, 2]:  ##正态相关JC-SU
+                print_Cp(dataUsed, rLimit[idx], lLimit[idx], 2, 0, 2, J1[idx], J2[idx], J3[idx], J4[idx], Cplong[idx],2)
+        elif Sheet == 'BA7':
+            url_BA7 = 'https://qrkapp-sandbox.mxapps.io/odata/QRKCarODataService/v1/BA7s'
+            df_BA7 = DataPrep_Mna1(url_car, url_BA7, 'Mna1_BA7')
+            data = df_BA7
+
+            pool = data.columns.tolist()
+            pool = pool[2:len(pool)]
+            Variable = st.selectbox('选择测点', pool)
+            rLimit = [4.428,4.174,4.106,4.124,4.343,4.103,3.272,30,4.030,3.168,8.908,4.204 ]
+            lLimit = [-4.533,-4.635,-4.144,-4.276,-5.203,-4.907,-7.764,20,-3.566,-4.278,-7.669,-5.066]
+            Cplong = [1.404,1.404,1.337,1.337,1.336,1.336,1.336,0,1.099,1.099,1.454,1,454]
+            paraboxcox= [0,0,0,0,0,0,-3.292,0,0,-0.6533,0,0]
+            J1 = [0,0,0,0,0,0,0,0,0,0,0.2014,0]
+            J2 = [0,0,0,0,0,0,0,0,0,0, 1.232, 0]
+            J3 = [0,0,0,0,0,0,0,0,0,0,17.80,0]
+            J4 = [0,0,0,0,0,0,0,0,0,0, 22.85,0]
+            idx = pool.index(Variable)
+            dataUsed = data.loc[:, ['Date', Variable]]
+            if idx in [6,9]:  ##正态相关BC
+                print_Cp(dataUsed, rLimit[idx], lLimit[idx], 1, paraboxcox[idx], 0, 0, 0, 0, 0, Cplong[idx], 2)
+            elif idx in [0,1,2,3,4,5,8,11]:  ##正态相关原始
+                print_Cp(dataUsed, rLimit[idx], lLimit[idx], 3, 0, 0, 0, 0, 0, 0, Cplong[idx], 2)
+            elif idx in [10]:  ##正态相关JC-SB
+                print_Cp(dataUsed, rLimit[idx], lLimit[idx], 2, 0, 1, J1[idx], J2[idx], J3[idx], J4[idx], Cplong[idx],2)
+            elif idx in [7]:  ##非正态
+                print_Cp(dataUsed, rLimit[idx], lLimit[idx], 4, 0, 0, 0, 0, 0, 0, 0, 0)
+        elif Sheet == '左翼子板':
+            url_LeftWingPanel = 'https://qrkapp-sandbox.mxapps.io/odata/QRKCarODataService/v1/LeftWingPanels'
+            df_LeftWingPanel = DataPrep_Mna1(url_car, url_LeftWingPanel, 'Mna1_LeftWingPanel')
+            data = df_LeftWingPanel
+
+            pool = data.columns.tolist()
+            pool = pool[2:len(pool)]
+            Variable = st.selectbox('选择测点', pool)
+            rLimit = [3.935, 5.414, 9.6, 4.500, 6.090, 6.750, 9.6, 6.706, 6.550, 5.580, -5.621, 2.517, 3.204, 2.798,
+                      3.249, 4.793]
+            lLimit = [-5.461, -4.261, 6.4, -4.006, -4.680, -4.380, 6.4, -5.354, -5.150, -3.750, 3.260, -7.705, -6.203,
+                      -3.497, -5.854, -4.016]
+            Cplong = [1.342, 1.342, 0, 1.342, 1.342, 1.342, 0, 1.457, 1.457, 1.457, 1.133, 1.133, 1.133, 1.133, 1.133,
+                      1.339]
+            paraboxcox = [0, 3.869, 0, 3.707, 0, 0, 0, 0, 0, 0, 0, -9.465, 0, 0, -4.548, 4.298]
+            J1 = [0, 0, 0, 0, -0.7710, -0.3361, 0, 0.7491, 0.5641, 1.099, -2.590, 0, -3.659, -1.094, 0, 0]
+            J2 = [0, 0, 0, 0, 1.190, 1.209, 0, 1.408, 1.064, 1.293, 1.853, 0, 2.157, 1.397, 0, 0]
+            J3 = [0, 0, 0, 0, 7.243, 7.371, 0, 7.079, 7.131, 6.909, 6.958, 0, 6.705, 7.214, 0, 0]
+            J4 = [0, 0, 0, 0, 9.327, 9.383, 0, 9.138, 9.051, 9.831, 0.2256, 0, 0.2687, 0.2867, 0, 0]
+            idx = pool.index(Variable)
+            dataUsed = data.loc[:, ['Date', Variable]]
+            if idx in [1,3,11,14]:  ##正态相关BC
+                print_Cp(dataUsed, rLimit[idx], lLimit[idx], 1, paraboxcox[idx], 0, 0, 0, 0, 0, Cplong[idx], 2)
+            elif idx in [15]:##正态独立BC
+                print_Cp(dataUsed, rLimit[idx], lLimit[idx], 1, paraboxcox[idx], 0, 0, 0, 0, 0, Cplong[idx], 1)
+            elif idx in [0]:  ##正态相关原始
+                print_Cp(dataUsed, rLimit[idx], lLimit[idx], 3, 0, 0, 0, 0, 0, 0, Cplong[idx], 2)
+            elif idx in [4,5,7,8,9]:  ##正态相关JC-SB
+                print_Cp(dataUsed, rLimit[idx], lLimit[idx], 2, 0, 1, J1[idx], J2[idx], J3[idx], J4[idx], Cplong[idx],2)
+            elif idx in [10,12,13]:  ##正态相关JC-SU
+                print_Cp(dataUsed, rLimit[idx], lLimit[idx], 2, 0, 2, J1[idx], J2[idx], J3[idx], J4[idx], Cplong[idx],2)
+            elif idx in [2,6]:  ##非正态
+                print_Cp(dataUsed, rLimit[idx], lLimit[idx], 4, 0, 0, 0, 0, 0, 0, 0, 0)
+        elif Sheet == '右翼子板':
+            url_RightWingPanel = 'https://qrkapp-sandbox.mxapps.io/odata/QRKCarODataService/v1/RightWingPanels'
+            df_RightWingPanel = DataPrep_Mna1(url_car, url_RightWingPanel, 'Mna1_RightWingPanel')
+            data = df_RightWingPanel
+
+            pool = data.columns.tolist()
+            pool = pool[2:len(pool)]
+            Variable = st.selectbox('选择测点', pool)
+            rLimit = [4.181,4.256,3.661,5.028,4.162,3.607,5.961,9.6,9.6,9.6,9.6,9.6,9.6,6.730,9.6,5.560]
+            lLimit = [-5.166,-5.317,-4.782,-3.557,-3.284,-3.733,-3.849,6.4,6.4,6.4,6.4,6.4,6.4,-4.310,6.4,-4.057]
+            Cplong = [1.289,1.289,1.289,1.289,1.289,1.289,1.280,0,0,0,0,0,0,1.450,0,1.352]
+            paraboxcox = [0,0,0,4.030,5.084,4.348,0,0,0,0,0,0,0,0,0,5.268]
+            J1 = [0,0,0,0,0,0,0.4058,0,0,0,0,0,0,1.700,0,0]
+            J2 = [0,0,0,0,0,0,1.104,0,0,0,0,0,0,1.358,0,0]
+            J3 = [0,0,0,0,0,0,7.152,0,0,0,0,0,0,6.964,0,0]
+            J4 = [0,0,0,0,0,0,9.452,0,0,0,0,0,0,9.768,0,0]
+            idx = pool.index(Variable)
+            dataUsed = data.loc[:, ['Date', Variable]]
+            if idx in [3,4,5]:  ##正态相关BC
+                print_Cp(dataUsed, rLimit[idx], lLimit[idx], 1, paraboxcox[idx], 0, 0, 0, 0, 0, Cplong[idx], 2)
+            elif idx in [15]:  ##正态独立BC
+                print_Cp(dataUsed, rLimit[idx], lLimit[idx], 1, paraboxcox[idx], 0, 0, 0, 0, 0, Cplong[idx], 1)
+            elif idx in [0,1,2]:  ##正态相关原始
+                print_Cp(dataUsed, rLimit[idx], lLimit[idx], 3, 0, 0, 0, 0, 0, 0, Cplong[idx], 2)
+            elif idx in [6,13]:  ##正态独立JC-SB
+                print_Cp(dataUsed, rLimit[idx], lLimit[idx], 2, 0, 1, J1[idx], J2[idx], J3[idx], J4[idx], Cplong[idx],1)
+            elif idx in [7,8,9,10,11,12,14]:  ##非正态
+                print_Cp(dataUsed, rLimit[idx], lLimit[idx], 4, 0, 0, 0, 0, 0, 0, 0, 0)
+
+
 
 
 # 控制图页面
