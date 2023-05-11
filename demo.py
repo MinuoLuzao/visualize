@@ -10,6 +10,7 @@ import json
 from requests_html import HTMLSession
 from requests.auth import HTTPBasicAuth
 import warnings
+import altair.vegalite.v4
 warnings.filterwarnings('ignore')
 
 # %%
