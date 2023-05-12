@@ -758,9 +758,10 @@ def short_norm_Cp(data, up, low,cplong,corrtype):
         long_cp[i]=cplong
 
     st.markdown(">**测点长短期能力指数折线图**")
-    plt.figure(figsize=(10, 7))  # 设置绘图大小为20*15
+    plt.figure(figsize=(10, 7))  # 设置绘图大小
+    plt.rcParams['font.sans-serif'] = ['SimHei']
     plt.xlabel('日期')  # 设置x、y轴标签
-    plt.ylabel('过程能力指数Cp')  # 设置y轴刻度范围为0~11
+    plt.ylabel('过程能力指数Cp')
     plt.plot(numberforCp,y, color='m', label='短期Cp')
     plt.plot(numberforCp,cpkx, color='g', label='短期Cpk')
     plt.xticks(ticks=range(0, round(group / 10) * 10, round(group / 10)), labels=date[0:10], rotation=45)
@@ -783,9 +784,10 @@ def short_norm_Cp(data, up, low,cplong,corrtype):
 
     st.markdown(">**测点观测值折线图**")
     st.write("可将数据与边界值情况与上图对照查看过程能力。")
-    plt.figure(figsize=(10, 7))  # 设置绘图大小为20*15
+    plt.figure(figsize=(10, 7))  # 设置绘图大小
+    plt.rcParams['font.sans-serif'] = ['SimHei']
     plt.xlabel('日期')  # 设置x、y轴标签
-    plt.ylabel('数据')  # 设置y轴刻度范围为0~11
+    plt.ylabel('测量值')
     plt.plot(numberfordata[1:quantity], data1[1:quantity], color='m', label='测点数据')
     upline = np.array([up] * quantity)
     lowline = np.array([low] * quantity)
@@ -865,9 +867,10 @@ def unnorm_Cp(data,up,low):
 
     st.write("转换方法：非正态方法")
     st.markdown(">**测点长短期能力指数折线图**")
-    plt.figure(figsize=(10,7))  # 设置绘图大小为20*15
+    plt.figure(figsize=(10,7))  # 设置绘图大小
+    plt.rcParams['font.sans-serif'] = ['SimHei']
     plt.xlabel('日期')  # 设置x、y轴标签
-    plt.ylabel('过程能力指数Cp') # 设置y轴刻度范围为0~11
+    plt.ylabel('过程能力指数Cp')
     plt.plot(numberforCp,y,color='m',label='短期能力指数')
 
     plt.xticks(ticks=range(0,round(group/10)*10,round(group/10)), labels=date[0:10], rotation=45)
@@ -885,9 +888,10 @@ def unnorm_Cp(data,up,low):
         ''')
     st.markdown(">**测点观测值折线图**")
     st.write("可将数据与边界值情况与上图对照查看过程能力。")
-    plt.figure(figsize=(10, 7))  # 设置绘图大小为20*15
+    plt.figure(figsize=(10, 7))  # 设置绘图大小
+    plt.rcParams['font.sans-serif'] = ['SimHei']
     plt.xlabel('日期')  # 设置x、y轴标签
-    plt.ylabel('数据')  # 设置y轴刻度范围为0~11
+    plt.ylabel('测量值')
     plt.plot(numberfordata, data1, color='m', label='测点数据')
     upline=np.array([up]*quantity)
     lowline=np.array([low]*quantity)
@@ -908,7 +912,7 @@ def print_Cp(data,up,low,type,boxcox,Jtype,J1,J2,J3,J4,cplong,corrtype):
         short_norm_Cp(johnson_change(data,Jtype,J1,J2,J3,J4),up,low,cplong,corrtype)
     elif type==3:
         short_norm_Cp(data,up,low,cplong,corrtype)
-        st.write("转换类型：原始数据符合正态分布。")
+        st.write("转换类型：无（原始数据符合正态分布)")
     elif type==4:
         unnorm_Cp(data,up,low)
 
