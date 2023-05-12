@@ -759,16 +759,15 @@ def short_norm_Cp(data, up, low,cplong,corrtype):
 
     st.markdown(">**测点长短期能力指数折线图**")
     plt.figure(figsize=(10, 7))  # 设置绘图大小
-    plt.rcParams['font.sans-serif'] = ['SimHei']
-    plt.xlabel('日期')  # 设置x、y轴标签
-    plt.ylabel('过程能力指数Cp')
-    plt.plot(numberforCp,y, color='m', label='短期Cp')
-    plt.plot(numberforCp,cpkx, color='g', label='短期Cpk')
+    plt.xlabel('Date')  # 设置x、y轴标签
+    plt.ylabel('Cp')
+    plt.plot(numberforCp,y, color='m', label='Short-term Cp')
+    plt.plot(numberforCp,cpkx, color='g', label='Short-term Cpk')
     plt.xticks(ticks=range(0, round(group / 10) * 10, round(group / 10)), labels=date[0:10], rotation=45)
     if corrtype == 1:
-        plt.plot(numberforCp, long_cp, color='b', label='长期单变量能力指数')
+        plt.plot(numberforCp, long_cp, color='b', label='Long-term Cp(Single)')
     elif corrtype == 2:
-        plt.plot(numberforCp, long_cp, color='b', label='长期多元能力指数')
+        plt.plot(numberforCp, long_cp, color='b', label='Long-term Cp(Multiple)')
     plt.legend(loc="upper left")
 
     st.pyplot(plt.gcf())
@@ -785,14 +784,13 @@ def short_norm_Cp(data, up, low,cplong,corrtype):
     st.markdown(">**测点观测值折线图**")
     st.write("可将数据与边界值情况与上图对照查看过程能力。")
     plt.figure(figsize=(10, 7))  # 设置绘图大小
-    plt.rcParams['font.sans-serif'] = ['SimHei']
-    plt.xlabel('日期')  # 设置x、y轴标签
-    plt.ylabel('测量值')
-    plt.plot(numberfordata[1:quantity], data1[1:quantity], color='m', label='测点数据')
+    plt.xlabel('Date')  # 设置x、y轴标签
+    plt.ylabel('Measured Value')
+    plt.plot(numberfordata[1:quantity], data1[1:quantity], color='m', label='Data')
     upline = np.array([up] * quantity)
     lowline = np.array([low] * quantity)
-    plt.plot(numberfordata, upline, color='b', label='上限')
-    plt.plot(numberfordata, lowline, color='g', label='下限')
+    plt.plot(numberfordata, upline, color='b', label='USL')
+    plt.plot(numberfordata, lowline, color='g', label='LSL')
     plt.xticks(ticks=range(0, round(quantity / 10) * 10, round(quantity / 10)), labels=date[0:10], rotation=45)
 
     plt.legend(loc="upper left")
@@ -868,13 +866,12 @@ def unnorm_Cp(data,up,low):
     st.write("转换方法：非正态方法")
     st.markdown(">**测点长短期能力指数折线图**")
     plt.figure(figsize=(10,7))  # 设置绘图大小
-    plt.rcParams['font.sans-serif'] = ['SimHei']
-    plt.xlabel('日期')  # 设置x、y轴标签
-    plt.ylabel('过程能力指数Cp')
-    plt.plot(numberforCp,y,color='m',label='短期能力指数')
+    plt.xlabel('Date')  # 设置x、y轴标签
+    plt.ylabel('Cp')
+    plt.plot(numberforCp,y,color='m',label='Short-term')
 
     plt.xticks(ticks=range(0,round(group/10)*10,round(group/10)), labels=date[0:10], rotation=45)
-    plt.plot(numberforCp, long_cp, color='b', label='长期能力指数')
+    plt.plot(numberforCp, long_cp, color='b', label='Long-term')
     plt.legend(loc="upper left")
 
     st.pyplot(plt.gcf())
@@ -889,14 +886,13 @@ def unnorm_Cp(data,up,low):
     st.markdown(">**测点观测值折线图**")
     st.write("可将数据与边界值情况与上图对照查看过程能力。")
     plt.figure(figsize=(10, 7))  # 设置绘图大小
-    plt.rcParams['font.sans-serif'] = ['SimHei']
-    plt.xlabel('日期')  # 设置x、y轴标签
-    plt.ylabel('测量值')
-    plt.plot(numberfordata, data1, color='m', label='测点数据')
+    plt.xlabel('Date')  # 设置x、y轴标签
+    plt.ylabel('Measured Value')
+    plt.plot(numberfordata, data1, color='m', label='Data')
     upline=np.array([up]*quantity)
     lowline=np.array([low]*quantity)
-    plt.plot(numberfordata, upline, color='b', label='上限')
-    plt.plot(numberfordata, lowline, color='g', label='下限')
+    plt.plot(numberfordata, upline, color='b', label='USL')
+    plt.plot(numberfordata, lowline, color='g', label='LSL')
     plt.xticks(ticks=range(0, round(quantity/10)*10, round(quantity/10)), labels=date[0:10], rotation=45)
 
     plt.legend(loc="upper left")
