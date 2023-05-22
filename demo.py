@@ -765,9 +765,9 @@ def short_norm_Cp(data, up, low,cplong,corrtype):
     plt.plot(numberforCp,cpkx, color='g', label='Short-term Cpk')
     plt.xticks(ticks=range(0, round(group / 10) * 10, round(group / 10)), labels=date[0:10], rotation=45)
     if corrtype == 1:
-        plt.plot(numberforCp, long_cp, color='b', label='Long-term Cp(Single)')
+        plt.plot(numberforCp, long_cp, color='b', label='Long-term Cp(Univariate)')
     elif corrtype == 2:
-        plt.plot(numberforCp, long_cp, color='b', label='Long-term Cp(Multiple)')
+        plt.plot(numberforCp, long_cp, color='b', label='Long-term Cp(Multivariate)')
     plt.legend(loc="upper left")
 
     st.pyplot(plt.gcf())
