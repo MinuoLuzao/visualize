@@ -374,8 +374,8 @@ def t_gamma(data,shape,loc,scale):
     
     from scipy.interpolate import interp1d
     
-    func_k1 = interp1d(a,k1sample,kind='cubic')
-    func_k2 = interp1d(a,k2sample,kind='cubic')
+    func_k1 = interp1d(a,k1sample,kind='cubic',fill_value="extrapolate")
+    func_k2 = interp1d(a,k2sample,kind='cubic',fill_value="extrapolate")
     k1 = func_k1(shape)
     k2 = func_k2(shape)
     
